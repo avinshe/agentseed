@@ -1,0 +1,6 @@
+[project]
+name = "test-python-project"
+version = "1.0.0"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

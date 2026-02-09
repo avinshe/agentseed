@@ -1,0 +1,14 @@
+{
+  "name": "@test/ui",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "react": "^18.0.0"
+  },
+  "devDependencies": {
+    "vitest": "^1.0.0"
+  }
+}

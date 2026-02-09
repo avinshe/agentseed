@@ -6,11 +6,10 @@ import { logger } from "../utils/logger";
 export async function detectSubfolders(
   rootDir: string
 ): Promise<SubfolderCandidate[]> {
-  // Look for candidate directories (depth 1-3)
+  // Find all candidate directories (heuristics handle filtering)
   const dirs = await fg("**/", {
     cwd: rootDir,
     onlyDirectories: true,
-    deep: 3,
     ignore: [
       "**/node_modules/**",
       "**/.git/**",
@@ -34,7 +33,27 @@ export async function detectSubfolders(
     }
   }
 
-  return candidates;
+  return deduplicateCandidates(candidates);
+}
+
+/**
+ * Remove any candidate whose ancestor is also a candidate (prefer shallower).
+ */
+function deduplicateCandidates(
+  candidates: SubfolderCandidate[]
+): SubfolderCandidate[] {
+  const paths = new Set(candidates.map((c) => c.relativePath));
+
+  return candidates.filter((c) => {
+    const parts = c.relativePath.split("/");
+    for (let i = 1; i < parts.length; i++) {
+      const ancestor = parts.slice(0, i).join("/");
+      if (ancestor !== c.relativePath && paths.has(ancestor)) {
+        return false;
+      }
+    }
+    return true;
+  });
 }
 
 export type { SubfolderCandidate } from "./heuristics";

@@ -1,6 +1,6 @@
 {
   "name": "agentseed",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "The best AGENTS.md generator. Analyze your codebase, seed AI agents with context.",
   "main": "dist/cli.js",
   "bin": {

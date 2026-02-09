@@ -8,14 +8,6 @@ npx agentseed init
 
 One command. agentseed reads your codebase — languages, frameworks, commands, architecture, conventions — and generates a production-quality `AGENTS.md` ready for 20+ AI tools.
 
-```
-your-repo/
-├── AGENTS.md          # Works with Copilot, Codex, Cursor, Gemini, Windsurf, Devin...
-├── CLAUDE.md          # Claude Code
-├── .cursorrules       # Cursor IDE
-└── .windsurfrules     # Windsurf
-```
-
 Free. Instant. No API key required.
 
 ---
@@ -48,18 +40,18 @@ npx agentseed init --provider ollama   # local, free
 agentseed generates `AGENTS.md` by default. Need files for specific tools too?
 
 ```bash
-npx agentseed init --format all     # AGENTS.md + CLAUDE.md + .cursorrules + copilot + windsurf
-npx agentseed init --format claude   # Just CLAUDE.md
+npx agentseed init --format all      # AGENTS.md + CLAUDE.md + .cursorrules + copilot + windsurf
+npx agentseed init --format claude    # Just CLAUDE.md
 ```
 
 | Format | File | Tools |
 |--------|------|-------|
-| `agents` | `AGENTS.md` | Copilot, Codex, Gemini, Cursor, Devin, 20+ |
+| `agents` | `AGENTS.md` | Copilot, Codex, Gemini, Cursor, Devin, 20+ (**default**) |
 | `claude` | `CLAUDE.md` | Claude Code |
 | `cursor` | `.cursorrules` | Cursor IDE |
 | `copilot` | `.github/copilot-instructions.md` | GitHub Copilot |
 | `windsurf` | `.windsurfrules` | Windsurf / Codeium |
-| `all` | All of the above | **Default** |
+| `all` | All of the above | Every tool at once |
 
 ---
 
@@ -74,7 +66,7 @@ npx agentseed init --format claude   # Just CLAUDE.md
 **Pass 2 — LLM Enhancement** (optional, bring your own key)
 - Smart-samples key files (entry points, configs, architecture)
 - Sends to Claude, GPT, or Ollama for richer project descriptions
-- One LLM call, rendered to all formats
+- One LLM call per directory, ~$0.08 each
 
 **Stays Current** — agentseed tracks git SHAs. Re-run and only changed files get regenerated. Use `--force` to refresh everything.
 
@@ -86,60 +78,101 @@ Every generated file contains 6 sections:
 
 | Section | Example |
 |---------|---------|
-| **Project Context** | "Hono is a lightweight web framework for multiple JS runtimes" |
-| **Stack** | TypeScript 97%, Vitest, esbuild |
-| **Commands** | `bun run test`, `bun run build`, `bun run lint` |
-| **Conventions** | kebab-case naming, module-based file organization |
-| **Architecture** | `src/` — core framework, `runtime-tests/` — per-runtime test suites |
-| **Boundaries** | Always run tests before committing. Never force-push to main. |
+| **Project Context** | "Flask is a lightweight WSGI web application framework for Python" |
+| **Stack** | Python 3.10+, werkzeug, jinja2, pytest, mypy, ruff |
+| **Commands** | `pytest`, `ruff check`, `mypy`, `sphinx-build` |
+| **Conventions** | snake_case, `from __future__ import annotations`, type hints required |
+| **Architecture** | `src/flask/sansio/` — I/O-independent core logic, `ctx.py` — context management |
+| **Boundaries** | Always run pre-commit hooks. Never use `type: ignore` without error code. |
 
 ---
 
 ## Real Output
 
-Running `agentseed init --provider claude` on [Hono](https://github.com/honojs/hono) (400+ files):
+### Static (free, instant)
+
+```bash
+npx agentseed init
+```
 
 ```markdown
 ## Project Context
 
-Hono is a lightweight web framework built on Web Standards that runs on
-multiple JavaScript runtimes (Cloudflare Workers, Deno, Bun, Node.js).
+A JavaScript project with 202 files across 64 directories.
+
+## Stack
+
+- JavaScript (92%), HTML (5%), CSS (3%)
+- Mocha (testing)
 
 ## Commands
 
-bun run test       # Run all tests
-bun run build      # Build the project
-bun run lint       # Run ESLint
+npm run test   # test
+npm run lint   # lint
+```
+
+### LLM-enhanced (~$0.08)
+
+```bash
+npx agentseed init --provider claude
+```
+
+```markdown
+## Project Context
+
+Express is a fast, unopinionated, minimalist web framework for Node.js.
+It provides routing, middleware support, template engine integration,
+and HTTP utility methods. This is version 5.x, requiring Node.js 18+.
+
+## Stack
+
+- JavaScript (ES6+, Node.js >=18)
+- Express 5.2.1, body-parser 2.2.1, router 2.2.0
+- Mocha 10.7.3, Supertest 6.3.0, ESLint 8.47.0
+
+## Commands
+
+npm run test       # Run all tests
+npm run test-ci    # Run tests with coverage (CI)
+npm run lint       # Run linter
 
 ## Boundaries
 
 ### Always
-- Run `bun run test` before committing
-- Follow kebab-case naming convention
+- Use `Object.create(null)` for objects used as maps to avoid prototype pollution
+- Return `this` from response methods to enable method chaining
 
 ### Never
-- Use runtime-specific APIs in core framework code
-- Break backward compatibility without major version bump
+- Break backward compatibility in patch/minor versions
+- Use synchronous I/O in request handling paths
 ```
 
-8 seconds. ~$0.08. All 5 output files generated simultaneously.
+Tested on Express, Flask, dbt-core, Axum, and Fresh — **$0.85 total** for 20 AGENTS.md files across all 5 repos.
 
 ---
 
 ## Monorepo Support
 
 ```bash
-agentseed scan
+npx agentseed scan
 ```
 
+agentseed automatically detects sub-projects by looking for **config files** (package.json, Cargo.toml, deno.json, pyproject.toml) and **source code density**. Non-code directories (docs, tests, examples) are skipped.
+
 ```
-my-monorepo/
-├── AGENTS.md                    # Root: full project overview
-├── packages/
-│   ├── api/
-│   │   └── AGENTS.md           # Scoped: only what differs from root
-│   └── web/
-│       └── AGENTS.md
+axum/                          # Rust workspace
+├── AGENTS.md                  # Root: full project overview
+├── axum/AGENTS.md             # Core framework crate
+├── axum-core/AGENTS.md        # Core traits and types
+├── axum-extra/AGENTS.md       # Optional extractors
+└── axum-macros/AGENTS.md      # Derive macros
+
+fresh/                         # Deno monorepo
+├── AGENTS.md                  # Root
+├── www/AGENTS.md              # Website
+├── packages/fresh/AGENTS.md   # Core framework
+├── packages/init/AGENTS.md    # Project scaffolder
+└── packages/plugin-vite/AGENTS.md
 ```
 
 Subfolder files only include sections that **differ** from root — clean, no duplication. Each subfolder tracks its own git SHA for incremental updates.
@@ -168,12 +201,11 @@ Subfolder files only include sections that **differ** from root — clean, no du
 agentseed init [options]
 
 Options:
-  -f, --format <name>    agents | claude | cursor | copilot | windsurf | all (default: all)
+  -f, --format <name>    agents | claude | cursor | copilot | windsurf | all (default: agents)
   -d, --dry-run          Preview output without writing files
   -o, --output <path>    Override output path (single format only)
-  -p, --provider <name>  claude | openai | ollama
+  -p, --provider <name>  claude | openai | ollama (enables LLM enhancement)
   -m, --model <name>     Override default model
-  --no-llm               Static analysis only (free, default)
   --force                Regenerate even if files are up to date
   -v, --verbose          Debug output
 ```

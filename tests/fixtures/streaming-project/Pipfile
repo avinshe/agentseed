@@ -1,0 +1,14 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+confluent-kafka = ">=2.3"
+apache-flink = ">=1.18"
+prefect = ">=2.14"
+jupyter = ">=1.0"
+soda-core = ">=3.0"
+
+[requires]
+python_version = "3.11"

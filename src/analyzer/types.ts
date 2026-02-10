@@ -6,7 +6,7 @@ export interface LanguageInfo {
 
 export interface FrameworkInfo {
   name: string;
-  category: "web" | "api" | "testing" | "build" | "orm" | "data" | "etl" | "other";
+  category: "web" | "api" | "testing" | "build" | "orm" | "data" | "etl" | "mlops" | "streaming" | "other";
   confidence: number;
 }
 

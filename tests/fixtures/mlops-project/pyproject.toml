@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "mlops-demo"
+version = "0.1.0"
+description = "MLOps project"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+mlflow = "^2.10"
+wandb = "^0.16"
+dvc = "^3.30"
+pyspark = "^3.5"
+pandas = "^2.0"
+
+[tool.poetry.scripts]
+train = "mlops_demo.train:main"

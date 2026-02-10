@@ -51,4 +51,43 @@ describe("init command (no-llm mode)", () => {
     expect(md).toContain("## Project Context");
     expect(md).toContain("Monorepo");
   });
+
+  it("generates AGENTS.md for data-etl-project with Dagster and Alembic commands", async () => {
+    const rootDir = path.join(FIXTURES, "data-etl-project");
+    const config = await loadConfig(rootDir, { noLlm: true });
+    const analysis = await analyze(rootDir, config);
+    const md = renderMarkdown(analysis, null);
+
+    expect(md).toContain("## Stack");
+    expect(md).toContain("## Commands");
+
+    // Should detect data/ETL frameworks
+    expect(md).toContain("Dagster");
+    expect(md).toContain("Snowflake");
+
+    // Should have uv run prefix on commands
+    expect(md).toContain("uv run dagster dev");
+    expect(md).toContain("uv run alembic upgrade head");
+
+    // dbt commands should also be present
+    expect(md).toContain("dbt run");
+  });
+
+  it("generates AGENTS.md for mlops-project with MLflow and DVC commands", async () => {
+    const rootDir = path.join(FIXTURES, "mlops-project");
+    const config = await loadConfig(rootDir, { noLlm: true });
+    const analysis = await analyze(rootDir, config);
+    const md = renderMarkdown(analysis, null);
+
+    expect(md).toContain("## Stack");
+    expect(md).toContain("## Commands");
+
+    // Should detect MLOps frameworks
+    expect(md).toContain("MLflow");
+    expect(md).toContain("DVC");
+
+    // Should have poetry run prefix on commands
+    expect(md).toContain("poetry run mlflow ui");
+    expect(md).toContain("poetry run dvc repro");
+  });
 });

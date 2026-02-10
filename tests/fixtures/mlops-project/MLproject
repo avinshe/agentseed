@@ -1,0 +1,4 @@
+name: mlops-demo
+entry_points:
+  main:
+    command: "python train.py"

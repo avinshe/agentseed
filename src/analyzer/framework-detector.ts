@@ -1,6 +1,7 @@
 import * as path from "node:path";
 import type { FrameworkInfo } from "./types";
 import { fileExists, readFileSync } from "../utils/fs";
+import { loadPyprojectToml, loadSetupCfg, parseTOML } from "../utils/toml";
 
 interface FrameworkSignature {
   name: string;
@@ -73,6 +74,24 @@ const FRAMEWORKS: FrameworkSignature[] = [
   { name: "Flyway", category: "data", indicators: { files: ["flyway.conf", "sql/"] } },
   { name: "Liquibase", category: "data", indicators: { files: ["liquibase.properties", "changelog.xml"] } },
   { name: "Terraform", category: "data", indicators: { files: ["main.tf", "terraform.tfvars"] } },
+  { name: "Snowflake", category: "data", indicators: { dependencies: ["snowflake-connector-python", "snowflake-sqlalchemy"] } },
+  { name: "DuckDB", category: "data", indicators: { dependencies: ["duckdb"] } },
+  { name: "Databricks", category: "data", indicators: { dependencies: ["databricks-sdk", "databricks-connect"] } },
+  { name: "Soda", category: "data", indicators: { dependencies: ["soda-core", "soda-core-pandas"] } },
+  { name: "Jupyter", category: "data", indicators: { files: ["notebooks/"], dependencies: ["jupyter", "jupyterlab", "notebook"] } },
+  { name: "Apache Beam", category: "etl", indicators: { dependencies: ["apache-beam"] } },
+  { name: "Mage.ai", category: "etl", indicators: { dependencies: ["mage-ai"] } },
+  { name: "Feast", category: "data", indicators: { files: ["feature_store.yaml"], dependencies: ["feast"] } },
+  { name: "Apache Superset", category: "data", indicators: { dependencies: ["apache-superset"] } },
+
+  // MLOps
+  { name: "MLflow", category: "mlops", indicators: { files: ["MLproject", "mlruns/"], dependencies: ["mlflow"] } },
+  { name: "DVC", category: "mlops", indicators: { files: ["dvc.yaml", ".dvc/"], dependencies: ["dvc"] } },
+  { name: "Weights & Biases", category: "mlops", indicators: { dependencies: ["wandb"] } },
+
+  // Streaming
+  { name: "Apache Kafka", category: "streaming", indicators: { dependencies: ["confluent-kafka", "kafka-python"] } },
+  { name: "Apache Flink", category: "streaming", indicators: { dependencies: ["apache-flink", "pyflink"] } },
 ];
 
 export async function detectFrameworks(
@@ -154,12 +173,71 @@ function loadPackageJson(rootDir: string): PackageJson | null {
 }
 
 function loadPythonDeps(rootDir: string): string[] {
+  const deps = new Set<string>();
+
+  // Helper: extract package name from a PEP 508 dependency string
+  const extractName = (raw: string): string | null => {
+    const trimmed = raw.trim();
+    if (!trimmed || trimmed.startsWith("#") || trimmed.startsWith("-")) return null;
+    // Strip extras like pkg[extra], version specifiers, env markers
+    const match = trimmed.match(/^([A-Za-z0-9_.-]+)/);
+    return match ? match[1].toLowerCase() : null;
+  };
+
+  // 1. requirements.txt
   const reqPath = path.join(rootDir, "requirements.txt");
   if (fileExists(reqPath)) {
-    return readFileSync(reqPath)
-      .split("\n")
-      .map((line) => line.split("==")[0].split(">=")[0].split("<=")[0].trim().toLowerCase())
-      .filter(Boolean);
+    for (const line of readFileSync(reqPath).split("\n")) {
+      const name = extractName(line);
+      if (name) deps.add(name);
+    }
   }
-  return [];
+
+  // 2-3. pyproject.toml (PEP 621 + Poetry)
+  const pyproject = loadPyprojectToml(rootDir);
+  if (pyproject) {
+    // PEP 621: [project.dependencies]
+    const project = pyproject.project as Record<string, unknown> | undefined;
+    if (project?.dependencies && Array.isArray(project.dependencies)) {
+      for (const dep of project.dependencies) {
+        const name = extractName(String(dep));
+        if (name) deps.add(name);
+      }
+    }
+
+    // Poetry: [tool.poetry.dependencies]
+    const tool = pyproject.tool as Record<string, unknown> | undefined;
+    const poetry = tool?.poetry as Record<string, unknown> | undefined;
+    const poetryDeps = poetry?.dependencies as Record<string, unknown> | undefined;
+    if (poetryDeps) {
+      for (const key of Object.keys(poetryDeps)) {
+        if (key !== "python") deps.add(key.toLowerCase());
+      }
+    }
+  }
+
+  // 4. setup.cfg [options] install_requires
+  const setupCfg = loadSetupCfg(rootDir);
+  if (setupCfg) {
+    const match = setupCfg.match(/install_requires\s*=\s*\n((?:[ \t]+\S.*\n?)*)/);
+    if (match) {
+      for (const line of match[1].split("\n")) {
+        const name = extractName(line);
+        if (name) deps.add(name);
+      }
+    }
+  }
+
+  // 5. Pipfile [packages]
+  const pipfile = parseTOML(path.join(rootDir, "Pipfile"));
+  if (pipfile) {
+    const packages = pipfile.packages as Record<string, unknown> | undefined;
+    if (packages) {
+      for (const key of Object.keys(packages)) {
+        deps.add(key.toLowerCase());
+      }
+    }
+  }
+
+  return Array.from(deps);
 }

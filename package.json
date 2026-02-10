@@ -1,6 +1,6 @@
 {
   "name": "agentseed",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "The best AGENTS.md generator. Analyze your codebase, seed AI agents with context.",
   "main": "dist/cli.js",
   "bin": {
@@ -51,6 +51,7 @@
     "nanospinner": "^1.2.2",
     "openai": "^4.85.4",
     "picocolors": "^1.1.1",
+    "smol-toml": "^1.6.0",
     "yaml": "^2.7.0",
     "zod": "^3.24.2"
   },
